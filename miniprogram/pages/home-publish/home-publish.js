@@ -140,7 +140,7 @@ Page({
       // 捕获其他未知错误
       wx.hideLoading()
       console.error('检测或发布失败', err)
-      wx.showToast({ title: '系统繁忙，请稍后再试', icon: 'none' })
+      wx.showToast({ title: '含有违规内容', icon: 'none' })
     }
   },
 
