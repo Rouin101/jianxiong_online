@@ -14,7 +14,7 @@ exports.main = async (event, context) => {
     try {
       // 查询该用户是否已有分数记录
       const existRes = await db.collection('scores')
-        .where({ openid })
+        .where({ _openid: openid })
         .get()
 
       if (existRes.data.length === 0) {
@@ -79,7 +79,7 @@ exports.main = async (event, context) => {
     try {
       // 查找当前用户的记录
       const myRes = await db.collection('scores')
-        .where({ _openid })
+        .where({ _openid : openid })
         .get()
 
       if (myRes.data.length === 0) {
@@ -97,8 +97,8 @@ exports.main = async (event, context) => {
       return {
         success: true,
         score: myScore,
-        rank,
-        total: null  // 如果需要总人数可另行查询，这里省略
+        rank
+        
       }
     } catch (e) {
       return { success: false, error: e }

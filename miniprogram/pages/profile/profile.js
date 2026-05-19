@@ -34,7 +34,7 @@ Page({
     
     try {
       let userInfo = app.globalData.userInfo
-      const currentOpenid = userInfo._openid
+      
       
       //// 计算答题排名
       try {
@@ -42,6 +42,7 @@ Page({
           name: 'quizFunctions',
           data: { action: 'getMyRank' }
         });
+        console.log("排名信息：",rankRes.result)
         if (rankRes.result && rankRes.result.success) {
           const { score, rank } = rankRes.result;
           userInfo.score = score || 0;
@@ -54,71 +55,73 @@ Page({
         console.warn('获取排名失败:', err);
         userInfo.rank = '加载失败';
       }
+      
       // 初始化默认值
-      let notesRes = { data: [] }
-      let forumRes = { data: [] }
-      let replyRes = { data: [] }
+      let notesRes = [] 
+      let forumRes = [] 
+      let replyRes = [] 
       
       ////查询三个集合
       try {
-        
-        // 1. 查询 Notes 
-        notesRes = await db.collection('notes')
-          .where({ _openid: currentOpenid })
-          .orderBy('createTime', 'desc')
-          .get()
- 
-        // 2. 查询 Forum_post (精简版)
-        forumRes = await db.collection('forum_post')
-          .where({ _openid: currentOpenid })
-          .orderBy('createTime', 'desc')
-          .get()
-        
-        // 3. 查询 Forum_reply
-        replyRes = await db.collection('forum_reply')
-          .where({ _openid: currentOpenid })
-          .orderBy('createTime', 'desc')
-          .get()
+         // 使用 await 等待结果，而不是放在 success 回调里
+        const res = await wx.cloud.callFunction({
+          name: 'getUserAllData', 
+        });
 
-        } catch (err) {
-          // 统一在这里捕获错误
-          console.warn('数据查询失败:', err)
-          // 如果出错，保持上面初始化的空数组即可
-          notesRes = { data: [] }
-          forumRes = { data: [] }
-          replyRes = { data: [] }
+        // 只有等上面的 await 完成后，才会执行下面的代码
+        if (res.result && res.result.success) {
+          const data = res.result.data
+          console.log('笔记:', data.notes) // 这里的日志会先打印
+          
+          // 赋值
+          notesRes = data.notes
+          forumRes = data.forumPosts
+          replyRes = data.replies
         }
-       
-        this.setData({
-          userInfo:userInfo,
-          myNotes: notesRes.data || [],
-          myForumPosts: forumRes.data || [],
-          myForumReplies: replyRes.data || [],
-          loading: false
-        })
-  
-        app.globalData.userInfo = userInfo
-        wx.hideLoading()
-  
+
+     
+        
       } catch (err) {
-        console.error('加载数据失败:', err)
-        this.setData({
-          loading: false,
-          userInfo: {
-            _id: 'temp_user',
-            nickname: '用户',
-            avatar: '/images/default-avatar.png',
-            bio: '加载失败，请返回重试',
-            score: 0
-          },
-          myNotes: [],
-          myForumPosts: [],
-          myForumReplies:[]
-        })
-        wx.hideLoading()
-        wx.showToast({ title: '加载失败，请返回重试', icon: 'none' })
+        // 统一在这里捕获错误
+        console.warn('数据查询失败:', err)
+        // 如果出错，保持上面初始化的空数组即可
+        notesRes = []
+        forumRes = [] 
+        replyRes = [] 
       }
-    },
+
+      this.setData({
+        userInfo:userInfo,
+        myNotes: notesRes || [],
+        myForumPosts: forumRes|| [],
+        myForumReplies: replyRes || [],
+        loading: false
+      })
+      
+      console.log(this.data)
+      app.globalData.userInfo = userInfo
+      wx.hideLoading()
+       
+    } catch (err) {
+      console.error('加载数据失败:', err)
+      this.setData({
+        loading: false,
+        userInfo: {
+          _id: 'temp_user',
+          nickname: '用户',
+          avatar: '/images/default-avatar.png',
+          bio: '加载失败，请返回重试',
+          score: 0
+        },
+        myNotes: [],
+        myForumPosts: [],
+        myForumReplies:[]
+      })
+      wx.hideLoading()
+      wx.showToast({ title: '加载失败，请返回重试', icon: 'none' })
+    }
+  },
+  
 
     // 一级tab切换
     switchTab(e) {
